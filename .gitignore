@@ -1,3 +1,8 @@
 .*.swp
 *.o
 *.json
+*.gfa
+*.bed
+*.bin
+*.log
+hifiasm
