@@ -78,6 +78,12 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "\ntimestamps for single thread error correct:\n");
 	fprintf(stderr, "chaining: %.3f\n", ts.chaining);
 	fprintf(stderr, "exact_align: %.3f\n", ts.exact_align);
+	fprintf(stderr, "	gen_hc_align: %.3f\n", ts.gen_hc_align);
+	fprintf(stderr, "	kv_resize: %.3f\n", ts.kv_resize);
+	fprintf(stderr, "	radix_sort_ei: %.3f\n", ts.radix_sort_ei);
+	fprintf(stderr, "	radix_sort_oi: %.3f\n", ts.radix_sort_oi);
+	fprintf(stderr, "	ec_check: %.3f\n", ts.ec_check);
+	fprintf(stderr, "	gen_hc_align_nec: %.3f\n", ts.gen_hc_align_nec);
 	fprintf(stderr, "phasing: %.3f\n", ts.phasing);
 	fprintf(stderr, "concensus_gen: %.3f\n", ts.concensus_gen);
 	fprintf(stderr, "total: %.3f\n", ts.total);

@@ -11,11 +11,22 @@
 #include "kalloc.h"
 
 typedef struct {
+    // worker_hap_ec
     double chaining;
     double exact_align;
     double phasing;
     double concensus_gen;
     double total;
+
+    // exact align
+    double gen_hc_align;
+
+    double kv_resize;
+    double radix_sort_ei;
+    double radix_sort_oi;
+    double ec_check;
+    double gen_hc_align_nec;
+    
 } timestamps_t;
 
 //#define CORRECT_THRESHOLD 0.70

@@ -2826,12 +2826,17 @@ void gen_hc_r_alin_ea(overlap_region_alloc* ol, Candidates_list *cl, All_reads *
     }
 
     if(!(srt->n)) {
+        a = yak_realtime();
         gen_hc_r_alin(ol, cl, rref, qu, tu, exz, aux_o, e_rate, wl, rid, khit, move_gap, buf, chem_drop, align_gap_rate, align_gap_max);
+        ts.gen_hc_align += yak_realtime() - a;
     } else {
         ///debug for memory
         // snprintf(NULL, 0, "dwn::%u\tdcn::%u", (uint32_t)aux_o->w_list.n, (uint32_t)aux_o->w_list.c.n);
 
+        a = yak_realtime();
         kv_resize(uint64_t, *srt, (srt->n + ol->length));
+        ts.kv_resize += yak_realtime() - a;
+        
         ei = srt->a; en = srt->n; oi = srt->a + srt->n; on = ol->length;
         for (k = 0; k < on; k++) {
             z = &(ol->list[k]); z->is_match = z->strong = z->without_large_indel = 0;
@@ -2839,7 +2844,15 @@ void gen_hc_r_alin_ea(overlap_region_alloc* ol, Candidates_list *cl, All_reads *
             oi[k] <<= 32; oi[k] |= k;
         }
 
-        radix_sort_ec64(ei, ei + en); radix_sort_ec64(oi, oi + on);
+        a = yak_realtime();
+        radix_sort_ec64(ei, ei + en);
+        ts.radix_sort_ei += yak_realtime() - a;
+
+        a = yak_realtime();
+        radix_sort_ec64(oi, oi + on);
+        ts.radix_sort_oi += yak_realtime() - a;
+
+        a = yak_realtime();
         for (k = i = nec = 0; k < on; k++) {
             z = &(ol->list[(uint32_t)oi[k]]); tid = z->y_id; trev = z->y_pos_strand;
             for (; (i < en) && ((ei[i]>>32) < ((tid<<1)|trev)); i++);
@@ -2857,13 +2870,15 @@ void gen_hc_r_alin_ea(overlap_region_alloc* ol, Candidates_list *cl, All_reads *
                 }
             }
         }
+        ts.ec_check += yak_realtime() - a;
         ///debug for memory
         // snprintf(NULL, 0, "dwn::%u\tdcn::%u", (uint32_t)aux_o->w_list.n, (uint32_t)aux_o->w_list.c.n);
 
         if(on > nec) {
+            a = yak_realtime();
             gen_hc_r_alin_nec(ol, cl, rref, qu, tu, exz, aux_o, e_rate, wl, rid, khit, move_gap, buf, chem_drop, align_gap_rate, align_gap_max);
+            ts.gen_hc_align_nec += yak_realtime() - a;
         }
-
         // fprintf(stderr, "[M::%s] srt->n::%u, nec::%lu, on::%lu\n", __func__, (uint32_t)srt->n, nec, on);
         ///debug for memory
         // snprintf(NULL, 0, "dwn::%u\tdcn::%u", (uint32_t)aux_o->w_list.n, (uint32_t)aux_o->w_list.c.n);
