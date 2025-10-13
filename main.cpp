@@ -3,11 +3,15 @@
 #include "CommandLines.h"
 #include "Process_Read.h"
 #include "Assembly.h"
+#include "Correct.h"
 #include "Levenshtein_distance.h"
 #include "htab.h"
 
+timestamps_t ts;
+
 int main(int argc, char *argv[])
 {
+	ts = {0};
 	int i, ret;
 	yak_reset_realtime();
     init_opt(&asm_opt);
@@ -71,5 +75,11 @@ int main(int argc, char *argv[])
 	for (i = 0; i < argc; ++i)
 		fprintf(stderr, " %s", argv[i]);
 	fprintf(stderr, "\n[M::%s] Real time: %.3f sec; CPU: %.3f sec; Peak RSS: %.3f GB\n", __func__, yak_realtime(), yak_cputime(), yak_peakrss_in_gb());
+	fprintf(stderr, "\ntimestamps for single thread error correct:\n");
+	fprintf(stderr, "chaining: %.3f\n", ts.chaining);
+	fprintf(stderr, "exact_align: %.3f\n", ts.exact_align);
+	fprintf(stderr, "phasing: %.3f\n", ts.phasing);
+	fprintf(stderr, "concensus_gen: %.3f\n", ts.concensus_gen);
+	fprintf(stderr, "total: %.3f\n", ts.total);
     return ret;
 }

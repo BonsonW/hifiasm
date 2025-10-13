@@ -19,6 +19,8 @@
 
 KDQ_INIT(uint32_t)
 
+extern timestamps_t ts;
+
 typedef struct {
 	uint32_t v:31, f:1;
 	uint32_t sc;
@@ -2810,7 +2812,8 @@ inline uint64_t exact_ec_check(char *qstr, uint64_t ql, char *tstr, uint64_t tl,
 void gen_hc_r_alin_ea(overlap_region_alloc* ol, Candidates_list *cl, All_reads *rref, UC_Read* qu, UC_Read* tu, bit_extz_t *exz, overlap_region *aux_o, double e_rate, int64_t wl, int64_t rid, int64_t khit, int64_t move_gap, asg16_v *buf, asg64_v *srt, ma_hit_t_alloc *in, uint8_t chem_drop, double align_gap_rate, int64_t align_gap_max)
 {
     if(ol->length <= 0) return;
-
+    double total = yak_realtime();
+    double a;
 
     // uint64_t k, l, i, s, m, mm_k, *ei, en, *oi, on, tid, trev, nec; int64_t sc, mm_sc, plus, minus; overlap_region *z, t; ma_hit_t *p;
     uint64_t k, i, m, *ei, en, *oi, on, tid, trev, nec; overlap_region *z; ma_hit_t *p;
@@ -3233,6 +3236,10 @@ uint32_t is_chemical_r_qual(overlap_region_alloc *ov, asg64_v *idx, int64_t len,
 
 static void worker_hap_ec(void *data, long i, int tid)
 {
+    assert(tid == 0); // benchmark on a single thread
+    double total = yak_realtime();
+    double a;
+    
 	ec_ovec_buf_t0 *b = &(((ec_ovec_buf_t*)data)->a[tid]);
     uint32_t high_occ = asm_opt.hom_cov * (2.0 - HA_KMER_GOOD_RATIO);
     uint32_t low_occ = asm_opt.hom_cov * HA_KMER_GOOD_RATIO;
@@ -3271,7 +3278,9 @@ static void worker_hap_ec(void *data, long i, int tid)
 
     recover_UC_Read(&b->self_read, &R_INF, i); qlen = b->self_read.length; 
 
+    a = yak_realtime();
     h_ec_lchain(b->ab, i, b->self_read.seq, b->self_read.length, asm_opt.mz_win, asm_opt.k_mer_length, &R_INF, &b->olist, &b->clist, ((asm_opt.is_ont)?(0.05):(0.02)), asm_opt.max_n_chain, 1, NULL, NULL, &(b->sp), &high_occ, &low_occ, 1, 1, 3, 0.7, 2, 32, COV_W);///ONT high error
+    ts.chaining += yak_realtime() - a;
 
     // b->num_read_base += b->olist.length;
     b->cnt[0] += b->self_read.length;
@@ -3285,7 +3294,9 @@ static void worker_hap_ec(void *data, long i, int tid)
     ///mz1_ha_sketch(rs, rl, mz_w, mz_k, 0, !(asm_opt.flag & HA_F_NO_HPC), &ab->mz, ha_flt_tab, asm_opt.mz_sample_dist, k_flag, dbg_ct, NULL, -1, asm_opt.dp_min_len, -1, sp, asm_opt.mz_rewin, 0, NULL);
     // if((asm_opt.is_ont) && (b->olist.length)) get_mz1(qu->seq, qu->length, RES_W, RES_K, 0, !(asm_opt.flag & HA_F_NO_HPC), b->ab, NULL, NULL, asm_opt.mz_sample_dist, NULL, NULL, NULL, -1, asm_opt.dp_min_len, -1, &(b->sp), asm_opt.mz_rewin, 0, NULL, 0);
 
+    a = yak_realtime();
     gen_hc_r_alin_ea(&b->olist, &b->clist, &R_INF, &b->self_read, &b->ovlp_read, &b->exz, aux_o, asm_opt.max_ov_diff_ec, (asm_opt.is_ont)?(WINDOW_OHC):(WINDOW_HC), i, E_KHIT/**asm_opt.k_mer_length**/, 1, &b->v16, &b->v64, &(R_INF.paf[i]), asm_opt.is_ont, (asm_opt.is_ont)?(0.006):(-1), (asm_opt.is_ont)?(64):(-1));
+    ts.exact_align += yak_realtime() - a;
     ///for debug indel
     // prt_ovlp_sam(&b->olist, &b->ovlp_read, b->self_read.seq, b->self_read.length);
 
@@ -3297,16 +3308,20 @@ static void worker_hap_ec(void *data, long i, int tid)
 
     // b->num_correct_base += b->olist.length;
 
-    copy_asg_arr(buf0, b->sp); 
+    copy_asg_arr(buf0, b->sp);
+    a = yak_realtime();
     rphase_hc(&b->olist, &R_INF, &b->hap, &b->self_read, &b->ovlp_read, &b->pidx, &b->v64, &buf0, 0, WINDOW_MAX_SIZE, b->self_read.length, 1/**, 0**/, i, (asm_opt.is_ont)?HPC_PL:0, asm_opt.is_ont, ((asm_opt.is_ont)?&(b->clist.chainDP):NULL), ((asm_opt.is_sc)?&(b->v8q):NULL), ((asm_opt.is_sc)?&(b->v8t):NULL), (asm_opt.is_ont)?1:0);
+    ts.phasing += yak_realtime() - a;
     copy_asg_arr(b->sp, buf0);
     ///for debug indel
     // stderr_phase_ovlp(&b->olist);
 
     dedup_chains(&b->olist);
-
+    
     copy_asg_arr(buf0, b->sp);
+    a = yak_realtime();
     b->cnt[1] += wcns_gen(&b->olist, &R_INF, &b->self_read, &b->ovlp_read, &b->exz, &b->pidx, &b->v64, &buf0, 0, 512, b->self_read.length, 3, 0.500001, aux_o, &b->v32, &b->cns, 256, i);
+    ts.concensus_gen += yak_realtime() - a;
     copy_asg_arr(b->sp, buf0);
 
     push_nec_re(aux_o, &(scc.a[i]));
@@ -3390,6 +3405,8 @@ static void worker_hap_ec(void *data, long i, int tid)
     **/
     // exit(1);
     refresh_ec_ovec_buf_t0(b, REFRESH_N);
+
+    ts.total += yak_realtime() - total;
 
     /**
     fprintf(stderr, "%ld\t---\n", i);

@@ -10,6 +10,14 @@
 #include "Correct.h"
 #include "kalloc.h"
 
+typedef struct {
+    double chaining;
+    double exact_align;
+    double phasing;
+    double concensus_gen;
+    double total;
+} timestamps_t;
+
 //#define CORRECT_THRESHOLD 0.70
 #define CORRECT_THRESHOLD 0.60
 ///#define CORRECT_THRESHOLD_SECOND 0.55
