@@ -26,6 +26,19 @@ typedef struct {
     double radix_sort_oi;
     double ec_check;
     double gen_hc_align_nec;
+
+    // gen_hc_align
+    double align_hc_ed_post_extz;
+    double gen_extend_err_exz;
+    double reassign_gaps;
+    double gen_hc_fast_cigar;
+    double ff_lunalign;
+    double ff_tend;
+
+    //align_hc_ed_post_extz
+    double recover_subregion;
+    double ed_band;
+    double push_hc_wlst_exz;
     
 } timestamps_t;
 

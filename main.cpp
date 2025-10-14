@@ -79,6 +79,15 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "chaining: %.3f\n", ts.chaining);
 	fprintf(stderr, "exact_align: %.3f\n", ts.exact_align);
 	fprintf(stderr, "	gen_hc_align: %.3f\n", ts.gen_hc_align);
+	fprintf(stderr, "		align_hc_ed_post_extz: %.3f\n", ts.align_hc_ed_post_extz);
+	fprintf(stderr, "			recover_subregion: %.3f\n", ts.recover_subregion);
+	fprintf(stderr, "			ed_band: %.3f\n", ts.ed_band);
+	fprintf(stderr, "			push_hc_wlst_exz: %.3f\n", ts.push_hc_wlst_exz);
+	fprintf(stderr, "		gen_extend_err_exz: %.3f\n", ts.gen_extend_err_exz);
+	fprintf(stderr, "		gen_hc_fast_cigar: %.3f\n", ts.gen_hc_fast_cigar);
+	fprintf(stderr, "		ff_lunalign: %.3f\n", ts.ff_lunalign);
+	fprintf(stderr, "		ff_tend: %.3f\n", ts.ff_tend);
+	fprintf(stderr, "		reassign_gaps: %.3f\n", ts.reassign_gaps);
 	fprintf(stderr, "	kv_resize: %.3f\n", ts.kv_resize);
 	fprintf(stderr, "	radix_sort_ei: %.3f\n", ts.radix_sort_ei);
 	fprintf(stderr, "	radix_sort_oi: %.3f\n", ts.radix_sort_oi);
