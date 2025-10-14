@@ -12983,7 +12983,7 @@ uint32_t align_hc_ed_post_extz(overlap_region *z, All_reads *rref, char* qstr, c
             t_l = t_pri_l;
             // t_end = Reserve_Banded_BPM(t_string, aln_l, q_string, q_l, thre, &error);
             a = yak_realtime();
-            ed_band_cal_semi_64_w_absent_diag(t_string, t_l, q_string, q_l, thre, aux_beg, exz);
+            ed_band_cal_semi_64_w_absent_diag_gpu(t_string, t_l, q_string, q_l, thre, aux_beg, exz);
             ts.ed_band += yak_realtime() - a;
 
             // if(z->x_id == 5569 && z->y_id == 5557 && q_s == 10075 && q_e == 10849) {

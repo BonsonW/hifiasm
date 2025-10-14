@@ -3724,6 +3724,57 @@ inline void ed_band_cal_extension_64_1_w_trace(char *pstr, int32_t pn, char *tst
     return;
 }
 
+inline void ed_band_cal_semi_64_w_absent_diag_gpu(char *pstr, int32_t pn, char *tstr, int32_t tn, int32_t thre, int32_t abs_diag, bit_extz_t *ez)
+{
+	init_base_ed(*ez, thre, pn, tn); ez->ps = ez->pe = -1; ez->ts = 0; ez->te = tn-1;
+	Word c, Peq[5] = {0}, VP = 0, VN, X, D0, HN, HP, mm;
+	int32_t bd, i, err = abs_diag, i_bd, last_high = (thre<<1), tn0 = tn - 1, cut = thre+last_high;
+	if((pn > tn + cut) || (tn > pn + cut)) return;
+
+	bd = ((thre<<1)+1)-abs_diag; bd = ((bd<=pn)?bd:pn); i_bd = abs_diag; 
+	for (i = 0, mm = (((Word)1)<<i_bd); i < bd; i++) {
+        Peq[seq_nt4_table[(uint8_t)pstr[i]]] |= mm; mm <<= 1;
+    }
+	i_bd = (thre<<1)-abs_diag; VN = (((Word)1)<<(abs_diag))-1; 
+
+	i = 0; Peq[4] = 0; mm = ((Word)1 << (thre<<1));///for the incoming char/last char**
+	while (i < tn0) {
+		ed_core_64(Peq, VP, VN, X, D0, HN, HP, (uint8_t)tstr[i]);
+		if (!(D0&(1ULL))) {
+            ++err; if (err>cut) return;
+        }
+
+		Peq[0] >>= 1; Peq[1] >>= 1; Peq[2] >>= 1; Peq[3] >>= 1;
+		++i; ++i_bd; c = 4;
+		if(i_bd < pn) c = seq_nt4_table[(uint8_t)pstr[i_bd]];
+		if(c < 4) Peq[c] |= mm; 
+	}
+	ed_core_64(Peq, VP, VN, X, D0, HN, HP, (uint8_t)tstr[i]);
+	if (!(D0&(1ULL))) {
+		++err; if (err>cut) return;
+	}
+
+	int32_t site = tn - 1 - abs_diag;/**up bound**/
+    /**in most cases, ai = (thre<<1)**/
+    int32_t ai = pn - tn + abs_diag, uge = INT32_MAX; i = 0;
+	for (i = 0; site < 0 && i < ai; i++, site++) {
+		err += ((VP >> i)&(1ULL)); err -= ((VN >> i)&(1ULL));
+	}
+    if ((err <= thre) && (err <= ez->err)) {
+        ez->err = err; ez->pe = site;
+    }
+    site -= i;
+    while (i < ai) {
+        err += ((VP >> i)&(1ULL)); err -= ((VN >> i)&(1ULL)); ++i;
+        if ((err <= thre) && (err <= ez->err)) {
+            ez->err = err; ez->pe = site + i;
+        }
+        if(i == thre) uge = err;
+    }
+    
+    if((uge <= thre) && (uge == ez->err)) ez->pe = site + thre;
+}
+
 inline void ed_band_cal_semi_64_w_absent_diag(char *pstr, int32_t pn, char *tstr, int32_t tn, int32_t thre, int32_t abs_diag, bit_extz_t *ez)
 {
 	init_base_ed(*ez, thre, pn, tn); ez->ps = ez->pe = -1; ez->ts = 0; ez->te = tn-1;
