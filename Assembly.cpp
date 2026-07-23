@@ -952,6 +952,8 @@ static void *output_corrected_thread(void *arg) {
     if(asm_opt.is_sc) Output_corrected_fastq();
     else Output_corrected_reads();
     return NULL;
+}
+
 static void Output_corrected_reads_n(int n)
 {
     long long i;
