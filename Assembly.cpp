@@ -1056,8 +1056,15 @@ void ha_ec(int64_t round, int num_pround, int des_idx, uint64_t *tot_b, uint64_t
     if(asm_opt.required_read_name) init_Debug_reads(&R_INF_FLAG, asm_opt.required_read_name); // for debugging only
     
     if(ha_idx) hom_cov = asm_opt.hom_cov;
-	if(ha_idx == NULL){
-        ha_idx = ha_pt_gen(&asm_opt, ha_flt_tab, round == 0? 0 : 1 /*KJ:read from store set to 1 after initial round, (if verbose gfa; r starts with num of rounds)*/, 0, &R_INF, &hom_cov, &het_cov); // build the index
+    // In -j continue mode the newly added reads have not been scanned into R_INF yet
+    // (total_reads0 == total_reads). Under --dbg-gfa a pt index is also preloaded from
+    // disk (ha_idx != NULL) that predates those reads; drop it and rebuild with
+    // read_from_store == 0 so the new fastq is scanned in and error-corrected on top of
+    // the loaded data instead of being ignored.
+    int load_new = (asm_opt.continue_from_prev_state && R_INF.total_reads0 == R_INF.total_reads);
+	if(ha_idx == NULL || load_new){
+        if(ha_idx) { ha_pt_destroy(ha_idx); ha_idx = NULL; }
+        ha_idx = ha_pt_gen(&asm_opt, ha_flt_tab, (round == 0 || load_new)? 0 : 1 /*KJ:read from store set to 1 after initial round, (if verbose gfa; r starts with num of rounds)*/, 0, &R_INF, &hom_cov, &het_cov); // build the index
         asm_opt.hom_cov = hom_cov; asm_opt.het_cov = het_cov;
     }
 	///debug_adapter(&asm_opt, &R_INF);
