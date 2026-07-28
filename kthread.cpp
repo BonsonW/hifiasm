@@ -15,17 +15,11 @@
  ************/
 
 struct kt_for_t;
-// struct kt_for_t_dirty;
 
 typedef struct {
 	struct kt_for_t *t;
 	long i;
 } ktf_worker_t;
-
-// typedef struct {
-// 	struct kt_for_t_dirty *t;
-// 	long i;
-// } ktf_worker_t_dirty;
 
 typedef struct kt_for_t {
 	int n_threads;
@@ -35,15 +29,6 @@ typedef struct kt_for_t {
 	void *data;
 	long *dirty_ids; // non-NULL in kt_for_dirty: compact list of pre-filtered dirty read IDs
 } kt_for_t;
-
-// typedef struct kt_for_t_dirty {
-// 	int n_threads;
-// 	long n;
-// 	ktf_worker_t_dirty *w;
-// 	void (*func)(void*,long,int);
-// 	void *data;
-// 	uint8_t* dirty_list;
-// } kt_for_t_dirty;
 
 static inline long steal_work(kt_for_t *t)
 {
@@ -117,9 +102,11 @@ void kt_for_mod(int n_threads, void (*func)(void*,long,int), void *data, long n)
 	}
 }
 
+// Like kt_for, but only visits the reads in [0, n) that are flagged dirty
+// (R_INF.dirty_reads). Used by --dirty-ec to re-correct old reads that were
+// marked dirty by the just-corrected new-read batch.
 void kt_for_dirty(int n_threads, void (*func)(void*,long,int), void *data, long n)
 {
-	// KJ:list of dirty reads so workers iterate dirty reads
 	long j, dirty_n = 0;
 	long *dirty_ids = (long*)malloc(n * sizeof(long));
 	for (j = 0; j < n; ++j)
@@ -167,6 +154,7 @@ void kt_for(int n_threads, void (*func)(void*,long,int), void *data, long n)
 		for (j = 0; j < n; ++j) func(data, j, 0);
 	}
 }
+
 /*****************
  * kt_pipeline() *
  *****************/

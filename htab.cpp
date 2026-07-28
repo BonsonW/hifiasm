@@ -565,15 +565,15 @@ inline uint64_t flt_quals(char *sc_a, uint64_t sc_l, uint64_t sc_off, int64_t sc
  * Buffer for counting all k-mers *
  **********************************/
 KSEQ_INIT(gzFile, gzread)
-#define HAF_COUNT_EXACT  0x1 //0000 0001
-#define HAF_COUNT_ALL    0x2 //0000 0010
-#define HAF_RS_WRITE_LEN 0x4 //0000 0100
-#define HAF_RS_WRITE_SEQ 0x8 //0000 1000
-#define HAF_RS_READ      0x10 //0001 0000
-#define HAF_CREATE_NEW   0x20 //0010 0000
-#define HAF_SKIP_READ    0x40 //0100 0000
-#define HAF_UG_READ      0x80 //1000 0000
-#define HAF_COUNT_REFINE 0x100 //0001 0000 0000
+#define HAF_COUNT_EXACT  0x1
+#define HAF_COUNT_ALL    0x2
+#define HAF_RS_WRITE_LEN 0x4
+#define HAF_RS_WRITE_SEQ 0x8
+#define HAF_RS_READ      0x10
+#define HAF_CREATE_NEW   0x20
+#define HAF_SKIP_READ    0x40
+#define HAF_UG_READ      0x80
+#define HAF_COUNT_REFINE 0x100
 
 typedef struct { // global data structure for kt_pipeline()
 	const yak_copt_t *opt;
@@ -717,7 +717,6 @@ static void *sf##_worker_count(void *data, int step, void *in) /** callback for 
 		s->uq = p->opt->uq;\
 		if (p->rs_in && (p->flag & HAF_RS_READ)) {\
 			while (p->n_seq < p->rs_in->total_reads) {\
-				/*if(p->n_seq < p->rs_in->total_reads0 && !p->rs_in->dirty_reads[p->n_seq++]) continue;*/\
 				if ((p->flag & HAF_SKIP_READ) && p->rs_in->trio_flag[p->n_seq] != AMBIGU) {\
 					++p->n_seq;\
 					continue;\
@@ -760,10 +759,6 @@ static void *sf##_worker_count(void *data, int step, void *in) /** callback for 
 			}\
 		} else {\
 			while ((ret = kseq_read(p->ks)) >= 0) {\
-				/*if(p->n_seq < p->rs_in->total_reads0){\
-					p->n_seq = p->rs_in->total_reads0;\
-					break;\
-				}*/\
 				int l = (int)(p->ks->seq.l) - (int)(p->opt->adaLen) - (int)(p->opt->adaLen);\
 				UC_Read ucr;\
 				init_UC_Read(&ucr);\
@@ -851,11 +846,6 @@ static void *sf##_worker_count(void *data, int step, void *in) /** callback for 
 			/**s->mz && s->mz_buf are lists of minimzer vectors**/\
 			CALLOC(s->mz, s->n_seq), CALLOC(s->mz_buf, p->opt->n_thread), CALLOC(s->mt, p->opt->n_thread);\
 			/**calculate minimzers for each read, each read corresponds to one thread**/\
-			/*if(p->n_seq < p->rs_in->total_reads0){\
-				kt_for_dirty(p->opt->n_thread, sf##_worker_for_mz, s, s->n_seq);\
-			}else{\
-				kt_for_mod(p->opt->n_thread, sf##_worker_for_mz, s, s->n_seq-p->rs_in->total_reads0);\
-			}*/\
 			kt_for(p->opt->n_thread, sf##_worker_for_mz, s, s->n_seq);\
 			for (i = 0; i < p->opt->n_thread; ++i) free(s->mt[i].a), free(s->mz_buf[i].a);\
 			free(s->mt), free(s->mz_buf);\
@@ -884,13 +874,6 @@ static void *sf##_worker_count(void *data, int step, void *in) /** callback for 
 		sf##_st_data_t *s = (sf##_st_data_t*)in;\
 		int i, n = 1<<p->opt->pre;uint64_t n_ins = 0;\
 		/**for 0-th counting, p->pt = NULL**/\
-		/*
-		if(p->n_seq < p->rs_in->total_reads0){\
-			kt_for_dirty(p->opt->n_thread, sf##_worker_for_insert, s, n);\
-		}else{\
-			kt_for_mod(p->opt->n_thread, sf##_worker_for_insert, s, n-p->rs_in->total_reads0);\
-		}\
-		*/\
 		kt_for(p->opt->n_thread, sf##_worker_for_insert, s, n);\
 		/**n_ins is number of distinct k-mers**/\
 		for (i = 0; i < n; ++i) {\
@@ -1001,9 +984,6 @@ static ha_ct_t *yak_count(const yak_copt_t *opt, const char *fn, int flag, ha_pt
 		gzclose(fp);
 	}
 	*n_seq = pl.n_seq;
-	
-	fprintf(stderr, "[M::%s] n_seq: %ld\n", __func__, (long)pl.n_seq);
-	fprintf(stderr, "[M::%s] rs->total_reads: %ld\n", __func__, (long)rs->total_reads);
 	if (pl.opt->w > 1) fprintf(stderr, "[M::%s] collected %ld minimizers\n", __func__, (long)pl.n_mz);
 	return pl.ct;
 }

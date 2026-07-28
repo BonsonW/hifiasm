@@ -82,6 +82,7 @@ static ko_longopt_t long_options[] = {
     { "rl-cut",     ko_required_argument, 364},
     { "sc-cut",     ko_required_argument, 365},
     { "keep-alive", ko_no_argument,       366},
+    { "dirty-ec",   ko_no_argument,       367},
     // { "path-round",     ko_required_argument, 348},
 	{ 0, 0, 0 }
 };
@@ -278,6 +279,7 @@ void init_opt(hifiasm_opt_t* asm_opt)
 	asm_opt->min_hist_kmer_cnt = 5;
     asm_opt->load_index_from_disk = 1;
     asm_opt->continue_from_prev_state = 0;
+    asm_opt->dirty_ec = 0;
     asm_opt->write_index_to_disk = 1;
     asm_opt->number_of_round = 3;
     asm_opt->number_of_pround = 0/**3**/;
@@ -743,6 +745,11 @@ int check_option(hifiasm_opt_t* asm_opt)
         return 0;
     }
 
+    if (asm_opt->dirty_ec && !asm_opt->continue_from_prev_state) {
+        fprintf(stderr, "[ERROR] --dirty-ec requires -j\n");
+        return 0;
+    }
+
     if(asm_opt->telo_motif) {
         uint64_t k, tlen = strlen((asm_opt->telo_motif)); char c;
         if(tlen > 32) {
@@ -1013,6 +1020,8 @@ int CommandLine_process(int argc, char *argv[], hifiasm_opt_t* asm_opt)
             asm_opt->sc_cut = atol(opt.arg);
         } else if (c == 366) {
             asm_opt->keep_alive = 1;
+        } else if (c == 367) {
+            asm_opt->dirty_ec = 1;
         } else if (c == 'l') {   ///0: disable purge_dup; 1: purge containment; 2: purge overlap
             asm_opt->purge_level_primary = asm_opt->purge_level_trio = atoi(opt.arg);
         }

@@ -819,24 +819,7 @@ void remove_overlaps(ma_hit_t_alloc* source_paf, uint64_t* source_index, long lo
     source_paf->length = m;
 }
 
-void copy_hit_with_flipped_qn_tn(ma_hit_t* source_hit , ma_hit_t* dest_hit)
-{
-    dest_hit->del = 0;
-    dest_hit->rev = source_hit->rev;
-    dest_hit->qns = Get_tn((*source_hit));
-    dest_hit->qns = dest_hit->qns << 32;
-    dest_hit->qns = dest_hit->qns | (uint64_t)(Get_ts((*source_hit)));
-    dest_hit->qe = Get_te((*source_hit));
-    dest_hit->tn = Get_qn((*source_hit));
-    dest_hit->ts = Get_qs((*source_hit));
-    dest_hit->te = Get_qe((*source_hit));
-    dest_hit->bl = R_INF.read_length[dest_hit->tn];
-    dest_hit->ml = source_hit->ml;
-    dest_hit->el = source_hit->el;
-    dest_hit->no_l_indel = source_hit->no_l_indel;
-}
-
-void add_overlaps_from_different_sources(ma_hit_t_alloc* source_paf_list, ma_hit_t_alloc* dest_paf, 
+void add_overlaps_from_different_sources(ma_hit_t_alloc* source_paf_list, ma_hit_t_alloc* dest_paf,
 uint64_t* source_index, long long listLen)
 {
     long long i;
@@ -1648,7 +1631,7 @@ uint32_t qn, uint32_t tn)
     for (i = 0; i < x->length; i++)
     {
         if(x->buffer[i].del) continue;
-        if(coverage_cut[Get_qn(x->buffer[i])].del) continue;//KJ: coverage_cut[Get_qn(x->buffer[i])] -->segfault @ i=48, (qns=18446744073709551615)>>32
+        if(coverage_cut[Get_qn(x->buffer[i])].del) continue;
         if(coverage_cut[Get_tn(x->buffer[i])].del) continue;
 
         if(Get_tn(x->buffer[i])==tn 
