@@ -72,6 +72,7 @@ typedef struct {
 	int max_n_chain; // fall-back max number of chains to consider
 	int min_hist_kmer_cnt;
     int load_index_from_disk;
+    int continue_from_prev_state;
     int write_index_to_disk;
     int number_of_round;
     int number_of_pround;
@@ -149,6 +150,8 @@ typedef struct {
     int32_t prt_dbg_gfa;
     int32_t integer_correct_round;
     uint8_t dbg_ovec_cal;
+    uint8_t keep_alive;
+    uint8_t dirty_ec;
     uint8_t hifi_pst_join, ul_pst_join;
     uint32_t ul_min_base;
     uint8_t self_scaf;

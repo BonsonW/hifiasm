@@ -22,8 +22,6 @@
 #define r_simi_w 0.05
 #define rphase_thres 4
 
-extern timestamps_t ts;
-
 #define generic_key(x) (x)
 KRADIX_SORT_INIT(b32, uint32_t, generic_key, 4)
 KRADIX_SORT_INIT(bc64, uint64_t, generic_key, 8)
@@ -12952,8 +12950,6 @@ uint32_t align_ul_ed_post_extz(overlap_region *z, const ul_idx_t *uref, hpc_t *h
 
 uint32_t align_hc_ed_post_extz(overlap_region *z, All_reads *rref, char* qstr, char *tstr, bit_extz_t *exz, double e_rate, int64_t w_l, double ovlp_cut, int64_t force_aln, void *km)
 {
-    double a;
-
     int64_t q_s, q_e, nw, k, q_l, t_l, t_tot_l, aux_beg, aux_end, t_s, thre, aln_l, t_pri_l;
     char *q_string, *t_string; 
     z->w_list.n = 0; z->is_match = 0; z->align_length = 0;
@@ -12972,19 +12968,13 @@ uint32_t align_hc_ed_post_extz(overlap_region *z, All_reads *rref, char* qstr, c
 
         aln_l = q_l + (thre<<1); t_tot_l = Get_READ_LENGTH((*rref), z->y_id); 
         if(init_waln(thre, t_s, t_tot_l, aln_l, &aux_beg, &aux_end, &t_s, &t_pri_l)) {
-            q_string = qstr+q_s;
-
-            a = yak_realtime();
+            q_string = qstr+q_s; 
             recover_UC_Read_sub_region(tstr, t_s, t_pri_l, z->y_pos_strand, rref, z->y_id); t_string = tstr;
-            ts.recover_subregion += yak_realtime() - a;
-
             // t_string = return_str_seq_exz(tstr, t_s, t_pri_l, z->y_pos_strand, hpc_g, uref, z->y_id);
             
             t_l = t_pri_l;
             // t_end = Reserve_Banded_BPM(t_string, aln_l, q_string, q_l, thre, &error);
-            a = yak_realtime();
-            ed_band_cal_semi_64_w_absent_diag_gpu(t_string, t_l, q_string, q_l, thre, aux_beg, exz);
-            ts.ed_band += yak_realtime() - a;
+            ed_band_cal_semi_64_w_absent_diag(t_string, t_l, q_string, q_l, thre, aux_beg, exz);
 
             // if(z->x_id == 5569 && z->y_id == 5557 && q_s == 10075 && q_e == 10849) {
             //     fprintf(stderr, "\n[M::%s::semi::t_s->%ld::t_pri_l->%ld::aux_beg->%ld::aux_end->%ld::thre->%ld] exz->ps::%d, exz->pe::%d, exz->ts::%d, exz->te::%d, exz->err::%d, exz->cigar.n::%d, thre::%ld\n", 
@@ -12999,10 +12989,8 @@ uint32_t align_hc_ed_post_extz(overlap_region *z, All_reads *rref, char* qstr, c
                 //     fprintf(stderr, "+[M::%s]\tq::[%ld,%ld)\tt::[%ld,%ld)\texz->err::%d\n", __func__, q_s, q_e + 1, t_s, t_s + exz->pe + 1, exz->err);
                 // }
                 ///t_s do not have aux_beg, while t_s + t_end (aka, te) has 
-                a = yak_realtime();
-                uint32_t x = push_hc_wlst_exz(NULL, NULL, rref, z, qstr, tstr, exz, THRESHOLD_MAX_SIZE, q_s, q_e, t_s, t_s + exz->pe, t_tot_l, aux_beg, aux_end, e_rate, w_l, ovlp_cut, force_aln, km);
-                ts.push_hc_wlst_exz += yak_realtime() - a;
-                if(!x) {
+                if(!push_hc_wlst_exz(NULL, NULL, rref, z, qstr, tstr, exz, THRESHOLD_MAX_SIZE, q_s, q_e, t_s, t_s + exz->pe, 
+                                        t_tot_l, aux_beg, aux_end, e_rate, w_l, ovlp_cut, force_aln, km)) {
                     return 0;
                 }
                 // append_window_list(z, q_s, q_e, t_s, t_s + t_end, error, aux_beg, aux_end, thre, w_l, km);
@@ -25628,9 +25616,6 @@ uint32_t inline ff_lunalign(overlap_region *z, double erate, double gap_rate, in
 
 void gen_hc_r_alin(overlap_region_alloc* ol, Candidates_list *cl, All_reads *rref, UC_Read* qu, UC_Read* tu, bit_extz_t *exz, overlap_region *aux_o, double e_rate, int64_t wl, int64_t rid, int64_t khit, int64_t move_gap, asg16_v* buf, uint8_t chem_drop, double align_gap_rate, int64_t align_gap_max)
 {
-    double a, b;
-    double x;
-
     uint64_t i, bs, k, ql = qu->length; Window_Pool w; double err, e_max, rr; int64_t re;
     overlap_region t; overlap_region *z; //asg64_v iidx, buf, buf1;
     ol->mapped_overlaps_length = 0;
@@ -25641,7 +25626,6 @@ void gen_hc_r_alin(overlap_region_alloc* ol, Candidates_list *cl, All_reads *rre
     err = e_rate; e_max = err * 1.5;
     init_Window_Pool(&w, ql, wl, (int)(1.0/err));
     bs = (w.window_length)+(THRESHOLD_MAX_SIZE<<1)+1;
-    
     resize_UC_Read(tu, bs<<1); 
     // fprintf(stderr, "[M::%s] window_length::%lld, err::%f\n", __func__, w.window_length, err);
 
@@ -25650,16 +25634,11 @@ void gen_hc_r_alin(overlap_region_alloc* ol, Candidates_list *cl, All_reads *rre
 
         // if(z->x_id == 19350 && z->y_id == 19324) fprintf(stderr, "-z-[M::%s] tid::%u\t%.*s\n", __func__, z->y_id, (int)Get_NAME_LENGTH(R_INF, z->y_id), Get_NAME(R_INF, z->y_id));
         
-        a = yak_realtime();
-        x = align_hc_ed_post_extz(z, rref, qu->seq, tu->seq, exz, err, w.window_length, OVERLAP_THRESHOLD_HIFI_FILTER, 0, NULL);
-        ts.align_hc_ed_post_extz += yak_realtime() - a;
-        if(!x) continue;
+        if(!align_hc_ed_post_extz(z, rref, qu->seq, tu->seq, exz, err, w.window_length, OVERLAP_THRESHOLD_HIFI_FILTER, 0, NULL)) continue;
 
         // if(z->x_id == 19350 && z->y_id == 19324) fprintf(stderr, "-m-[M::%s] tid::%u\t%.*s\n", __func__, z->y_id, (int)Get_NAME_LENGTH(R_INF, z->y_id), Get_NAME(R_INF, z->y_id));
 
-        a = yak_realtime();
         rr = gen_extend_err_exz(z, NULL, NULL, rref, qu->seq, tu->seq, exz, NULL, w.window_length, -1, err, (e_max+0.000001), THRESHOLD_MAX_SIZE, 0, &re);
-        ts.gen_extend_err_exz += yak_realtime() - a;
         z->is_match = 0; 
 
         // if(z->x_id == 19350 && z->y_id == 19324) fprintf(stderr, "-0-[M::%s] tid::%u\t%.*s\trr::%f\tre::%ld\n", __func__, z->y_id, (int)Get_NAME_LENGTH(R_INF, z->y_id), Get_NAME(R_INF, z->y_id), rr, re);
@@ -25667,26 +25646,16 @@ void gen_hc_r_alin(overlap_region_alloc* ol, Candidates_list *cl, All_reads *rre
         if (rr > err) continue;
         z->non_homopolymer_errors = re;
 
-        a = yak_realtime();
-        x = gen_hc_fast_cigar(z, cl, rref, w.window_length, qu->seq, tu, exz, aux_o, e_rate, ql, rid, khit, &re);
-        ts.gen_hc_fast_cigar += yak_realtime() - a;
-        if(!x) continue;
+        if(!gen_hc_fast_cigar(z, cl, rref, w.window_length, qu->seq, tu, exz, aux_o, e_rate, ql, rid, khit, &re)) continue;
 
-        a = yak_realtime();
-        x = ff_lunalign(z, err, align_gap_rate, align_gap_max);
-        ts.ff_lunalign += yak_realtime() - a;
-        if((align_gap_max >= 0) && (!x)) continue;
+        if((align_gap_max >= 0) && (!ff_lunalign(z, err, align_gap_rate, align_gap_max))) continue;
 
-        a = yak_realtime();
-        x = ff_tend(z, 384, 2000, 0.1, (((e_rate*10)<0.36)?(e_rate*10):(0.36)), 128);
-        ts.ff_tend += yak_realtime() - a;
-        if(chem_drop && x) continue;
+        if(chem_drop && ff_tend(z, 384, 2000, 0.1, (((e_rate*10)<0.36)?(e_rate*10):(0.36)), 128)) continue;
+
 
         // if(z->x_id == 3196 && z->y_id == 3199) fprintf(stderr, "-1-[M::%s] tid::%u\t%.*s\trr::%f\tre::%ld\n", __func__, z->y_id, (int)Get_NAME_LENGTH(R_INF, z->y_id), Get_NAME(R_INF, z->y_id), rr, re);
 
-        a = yak_realtime();
         reassign_gaps(z, aux_o, qu->seq, ql, NULL, -1, rref, tu, buf);
-        ts.reassign_gaps += yak_realtime() - a;
 
         // fprintf(stderr, "-2-[M::%s] tid::%u\t%.*s\trr::%f\tre::%u\n", __func__, z->y_id, (int)Get_NAME_LENGTH(R_INF, z->y_id), Get_NAME(R_INF, z->y_id), rr, z->non_homopolymer_errors);
 

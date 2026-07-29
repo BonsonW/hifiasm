@@ -12,12 +12,12 @@ EXE=		hifiasm
 LIBS=		-lz -lpthread -lm
 
 ifneq ($(asan),)
-	CXXFLAGS+=-fsanitize=address
-	LIBS+=-fsanitize=address
+	CXXFLAGS+=-fsanitize=address,undefined,signed-integer-overflow,bounds
+	LIBS+=-fsanitize=address,undefined,signed-integer-overflow,bounds
 endif
 
 .SUFFIXES:.cpp .c .o
-.PHONY:all clean depend
+.PHONY:all clean depend test
 
 .cpp.o:
 		$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
@@ -30,8 +30,14 @@ all:$(EXE)
 $(EXE):$(OBJS) main.o
 		$(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
 
+test: test_overlaps
+		./test_overlaps
+
+test_overlaps: test_overlaps.c
+		$(CC) $(CFLAGS) -o test_overlaps test_overlaps.c
+
 clean:
-		rm -fr gmon.out *.o a.out $(EXE) *~ *.a *.dSYM
+		rm -fr gmon.out *.o a.out $(EXE) test_overlaps *~ *.a *.dSYM
 
 depend:
 		(LC_ALL=C; export LC_ALL; makedepend -Y -- $(CPPFLAGS) $(DFLAGS) -- *.cpp)

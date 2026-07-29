@@ -8,6 +8,7 @@
 #include <zlib.h>
 #include "Overlaps.h"
 #include "CommandLines.h"
+#include "All_reads.h"
 ///#include "Hash_Table.h"
 
 #define READ_INIT_NUMBER 1000
@@ -84,22 +85,6 @@ inline void append_PAF_alloc(PAF_alloc* list, PAF* e)
     list->list[list->length] = (*e);
     list->length++;
 }
-
-typedef struct
-{
-    /**[0-1] bits are type:**/
-    /**[2-31] bits are length**/
-    uint32_t* record;
-    uint32_t length;
-	uint32_t size;
-
-    char* lost_base;
-    uint32_t lost_base_length;
-	uint32_t lost_base_size;
-	uint32_t new_length;
-} Compressed_Cigar_record;
-
-
 #define AMBIGU 0
 #define FATHER 1
 #define MOTHER 2
@@ -111,39 +96,6 @@ typedef struct
 #define CHAIN_UNMATCH 0.334
 
 #define NEC 1
-
-typedef struct
-{
-	uint64_t** N_site;
-	///uint8_t* read;
-	char* name;
-
-	uint8_t** read_sperate;
-	uint64_t* read_length;
-	uint64_t* read_size;
-	uint8_t* trio_flag;
-    uint8_t** rsc;
-
-	///seq start pos in uint8_t* read
-	///do not need it
-	///uint64_t* index;
-	uint64_t index_size;
-
-    ///name start pos in char* name
-	uint64_t* name_index;
-	uint64_t name_index_size;
-	uint64_t total_reads;
-	uint64_t total_reads_bases;
-	uint64_t total_name_length;
-
-	Compressed_Cigar_record* cigars; 
-	Compressed_Cigar_record* second_round_cigar;
-
-    ma_hit_t_alloc* paf;
-    ma_hit_t_alloc* reverse_paf;
-
-    ///kvec_t_u64_warp* pb_regions;
-} All_reads;
 
 extern All_reads R_INF;
 
@@ -224,7 +176,9 @@ extern all_ul_t ULG_INF;
 // extern uint32_t debug_out;
 
 void init_All_reads(All_reads* r);
+void reinit_All_reads(All_reads* r);
 void malloc_All_reads(All_reads* r);
+void realloc_All_reads(All_reads* r);
 void ha_insert_read_len(All_reads *r, int read_len, int name_len);
 void ha_compress_base(uint8_t* dest, char* src, uint64_t src_l, uint64_t** N_site_lis, uint64_t N_site_occ);
 void ha_compress_qual(uint8_t* dest, char* src, uint64_t src_l, uint64_t bitn, uint64_t sc_off);

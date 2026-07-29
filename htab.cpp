@@ -760,13 +760,21 @@ static void *sf##_worker_count(void *data, int step, void *in) /** callback for 
 		} else {\
 			while ((ret = kseq_read(p->ks)) >= 0) {\
 				int l = (int)(p->ks->seq.l) - (int)(p->opt->adaLen) - (int)(p->opt->adaLen);\
+				UC_Read ucr;\
+				init_UC_Read(&ucr);\
 				if((l <= 0) || (l < asm_opt.rl_cut)) continue;\
 				if((asm_opt.is_sc) && (asm_opt.sc_cut > 0) && (!flt_quals(p->ks->qual.s+p->opt->adaLen, l, 33, asm_opt.sc_cut))) continue;\
 				if (p->n_seq >= 1<<28) {\
 					fprintf(stderr, "ERROR: this implementation supports no more than %d reads\n", 1<<28);\
 					exit(1);\
+				} if ((p->rs_out && p->n_seq < p->rs_out->total_reads0) && (!(p->flag & HAF_RS_WRITE_LEN) && (p->flag & HAF_RS_WRITE_SEQ))) {\
+					assert(l == (int)p->rs_out->read_length[p->n_seq]);\
+					/*KJ: TODO: assertion might fail if the uncorrected fq was given instead of corrected fq in realtime mode; Warn user!*/\
+					assert(p->rs_out->read_sperate[p->n_seq] != NULL);\
+					recover_UC_Read(&ucr, p->rs_out, p->n_seq);\
+					assert(memcmp(ucr.seq, p->ks->seq.s+p->opt->adaLen, l) == 0);\
 				}\
-				if (p->rs_out) {\
+				if (p->rs_out && p->n_seq >= p->rs_out->total_reads0) {\
 					/**for 0-th count, just insert read length to R_INF, instead of read**/\
 					if (p->flag & HAF_RS_WRITE_LEN) {\
 						assert(p->n_seq == p->rs_out->total_reads);\
@@ -983,17 +991,33 @@ static ha_ct_t *yak_count(const yak_copt_t *opt, const char *fn, int flag, ha_pt
 ha_ct_t *ha_count(const hifiasm_opt_t *asm_o, int flag, int HPC, int k, int w, ha_pt_t *p0, const void *flt_tab, All_reads *rs, ma_utg_v *us, int keep_adapter, int *low_freq, int unique_only)
 {
 	int i;
-	int64_t n_seq = 0;
+	int64_t rl_cut = asm_opt.rl_cut;
+	int64_t n_seq=0; 
+	// int64_t n_seq = R_INF.total_reads0; 
 	uint64_t n_bs = 0;
 	yak_copt_t opt;
 	ha_ct_t *h = 0;
 	assert(!(flag & HAF_RS_WRITE_LEN) || !(flag & HAF_RS_WRITE_SEQ)); // not both
 	///for 0-th counting, flag = HAF_COUNT_ALL|HAF_RS_WRITE_LEN
-	if (rs) {
-		if (flag & HAF_RS_WRITE_LEN)
+	if (rs){
+		if (flag & HAF_RS_WRITE_LEN ){//KJ: if prev state was loaded from verbose gfa, this opt check is unneccessary
+			if(asm_opt.continue_from_prev_state==0)
 			init_All_reads(rs);
-		else if (flag & HAF_RS_WRITE_SEQ)
-			malloc_All_reads(rs);
+			else
+			{
+				reinit_All_reads(rs);
+				// rs->total_reads=0;
+
+			}
+		}else if (flag & HAF_RS_WRITE_SEQ){
+			if(asm_opt.continue_from_prev_state==0) {
+				malloc_All_reads(rs);
+			}else{
+				realloc_All_reads(rs);
+				// rs->total_reads=rs->total_reads0;
+			}
+		}
+			
 	}
 	yak_copt_init(&opt);
 	opt.k = k;
@@ -1019,7 +1043,9 @@ ha_ct_t *ha_count(const hifiasm_opt_t *asm_o, int flag, int HPC, int k, int w, h
 	}**/
 	///asm_opt->num_reads is the number of fastq files
 	for (i = 0; i < (us?1:asm_o->num_reads); ++i){
-		h = yak_count(&opt, asm_o->read_file_names[i], flag|HAF_CREATE_NEW, p0, h, flt_tab, rs, us, &n_seq);
+		if(asm_opt.continue_from_prev_state && i==0 && ((flag & HAF_RS_WRITE_LEN) || (flag & HAF_RS_WRITE_SEQ))) asm_opt.rl_cut=0;//KJ: since the reads may be less than rl_cut after correction enforcing rl_cut would miss loading such reads from ec.fq
+		else if(asm_opt.continue_from_prev_state && i!=0) asm_opt.rl_cut=rl_cut;
+		h = yak_count(&opt, asm_o->read_file_names[i], flag|HAF_CREATE_NEW, p0, h, flt_tab, rs, us, &n_seq);//KJ: after reading from fq files, pt update doesn't happen for num_reads (n_seq is not < total_reads)
 		if(h) n_bs += h->bs;
 	}
 	if(h) h->bs = n_bs;	
@@ -1235,9 +1261,10 @@ ha_pt_t *ha_pt_gen(const hifiasm_opt_t *asm_opt, const void *flt_tab, int read_f
 	int peak_hom, peak_het, i, extra_flag1, extra_flag2;
 	ha_ct_t *ct;
 	ha_pt_t *pt;
+	//KJ: read_from_store = 1 either after the initial round or if reads are loaded with verbose gfa
 	if (read_from_store) {///if reads have already been read
 		extra_flag1 = extra_flag2 = HAF_RS_READ;
-	} else if (rs->total_reads == 0) {///if reads & length have not been scanned
+	} else if (rs->total_reads == 0 || (asm_opt->continue_from_prev_state && rs->total_reads0 == rs->total_reads)) {///if reads & length have not been scanned
 		extra_flag1 = HAF_RS_WRITE_LEN;
 		extra_flag2 = HAF_RS_WRITE_SEQ;
 	} else {///if length has been loaded but reads have not
@@ -1271,7 +1298,7 @@ ha_pt_t *ha_pt_gen(const hifiasm_opt_t *asm_opt, const void *flt_tab, int read_f
 	if(!(asm_opt->flag & HA_F_FAST))
 	{
 		fprintf(stderr, "[M::%s::] counting in normal mode\n", __func__);
-		pt = ha_pt_gen(ct, asm_opt->thread_num, 0);
+		pt = ha_pt_gen(ct, asm_opt->thread_num, 0);//KJ: second call with ct 
 		ha_count(asm_opt, HAF_COUNT_EXACT|extra_flag2,  !(asm_opt->flag&HA_F_NO_HPC), asm_opt->k_mer_length, asm_opt->mz_win, pt, flt_tab, rs, NULL, 1, NULL, 0);
 		assert((uint64_t)tot_cnt == pt->tot_pos);
 	}

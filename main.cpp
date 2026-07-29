@@ -3,15 +3,11 @@
 #include "CommandLines.h"
 #include "Process_Read.h"
 #include "Assembly.h"
-#include "Correct.h"
 #include "Levenshtein_distance.h"
 #include "htab.h"
 
-timestamps_t ts;
-
 int main(int argc, char *argv[])
 {
-	ts = {0};
 	int i, ret;
 	yak_reset_realtime();
     init_opt(&asm_opt);
@@ -75,26 +71,5 @@ int main(int argc, char *argv[])
 	for (i = 0; i < argc; ++i)
 		fprintf(stderr, " %s", argv[i]);
 	fprintf(stderr, "\n[M::%s] Real time: %.3f sec; CPU: %.3f sec; Peak RSS: %.3f GB\n", __func__, yak_realtime(), yak_cputime(), yak_peakrss_in_gb());
-	fprintf(stderr, "\ntimestamps for single thread error correct:\n");
-	fprintf(stderr, "chaining: %.3f\n", ts.chaining);
-	fprintf(stderr, "exact_align: %.3f\n", ts.exact_align);
-	fprintf(stderr, "	gen_hc_align: %.3f\n", ts.gen_hc_align);
-	fprintf(stderr, "		align_hc_ed_post_extz: %.3f\n", ts.align_hc_ed_post_extz);
-	fprintf(stderr, "			recover_subregion: %.3f\n", ts.recover_subregion);
-	fprintf(stderr, "			ed_band: %.3f\n", ts.ed_band);
-	fprintf(stderr, "			push_hc_wlst_exz: %.3f\n", ts.push_hc_wlst_exz);
-	fprintf(stderr, "		gen_extend_err_exz: %.3f\n", ts.gen_extend_err_exz);
-	fprintf(stderr, "		gen_hc_fast_cigar: %.3f\n", ts.gen_hc_fast_cigar);
-	fprintf(stderr, "		ff_lunalign: %.3f\n", ts.ff_lunalign);
-	fprintf(stderr, "		ff_tend: %.3f\n", ts.ff_tend);
-	fprintf(stderr, "		reassign_gaps: %.3f\n", ts.reassign_gaps);
-	fprintf(stderr, "	kv_resize: %.3f\n", ts.kv_resize);
-	fprintf(stderr, "	radix_sort_ei: %.3f\n", ts.radix_sort_ei);
-	fprintf(stderr, "	radix_sort_oi: %.3f\n", ts.radix_sort_oi);
-	fprintf(stderr, "	ec_check: %.3f\n", ts.ec_check);
-	fprintf(stderr, "	gen_hc_align_nec: %.3f\n", ts.gen_hc_align_nec);
-	fprintf(stderr, "phasing: %.3f\n", ts.phasing);
-	fprintf(stderr, "concensus_gen: %.3f\n", ts.concensus_gen);
-	fprintf(stderr, "total: %.3f\n", ts.total);
     return ret;
 }

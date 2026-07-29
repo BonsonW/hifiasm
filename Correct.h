@@ -10,38 +10,6 @@
 #include "Correct.h"
 #include "kalloc.h"
 
-typedef struct {
-    // worker_hap_ec
-    double chaining;
-    double exact_align;
-    double phasing;
-    double concensus_gen;
-    double total;
-
-    // exact align
-    double gen_hc_align;
-
-    double kv_resize;
-    double radix_sort_ei;
-    double radix_sort_oi;
-    double ec_check;
-    double gen_hc_align_nec;
-
-    // gen_hc_align
-    double align_hc_ed_post_extz;
-    double gen_extend_err_exz;
-    double reassign_gaps;
-    double gen_hc_fast_cigar;
-    double ff_lunalign;
-    double ff_tend;
-
-    //align_hc_ed_post_extz
-    double recover_subregion;
-    double ed_band;
-    double push_hc_wlst_exz;
-    
-} timestamps_t;
-
 //#define CORRECT_THRESHOLD 0.70
 #define CORRECT_THRESHOLD 0.60
 ///#define CORRECT_THRESHOLD_SECOND 0.55
