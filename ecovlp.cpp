@@ -6419,23 +6419,34 @@ void cal_ec_r(uint64_t n_thre, uint64_t round, uint64_t n_round, uint64_t n_a, u
 
 
     b = gen_ec_ovec_buf_t(n_thre);
+
+    ha_prof_enter("first-pass-correct");
     (*tot_e) += cal_ec_multiple(b, n_thre, n_a, tot_b); ///exit(1);
+    ha_prof_leave();
 
+    ha_prof_enter("save-corrected");
     sl_ec_r(n_thre, n_a);
+    ha_prof_leave();
 
 
+    if (n_round) ha_prof_enter("secondary-rounds");
     for (k = 0; k < n_round; k++) {
         (*tot_e) += cal_sec_ec_multiple(b, n_thre, n_a, k);
         sl_ec_r(n_thre, n_a);
     }
+    if (n_round) ha_prof_leave();
 
+    ha_prof_enter("update-overlaps");
     cal_update_ec_multiple(b, n_thre, n_a);///update overlaps
+    ha_prof_leave();
 
     // if(is_sv) kt_for(n_thre, worker_hap_dc_ec, b, n_a);///update overlaps
-    
+
 
     if((!is_sv) || (is_sv && is_cr)) {
+        ha_prof_enter("post-reverse");
         kt_for_ec(n_thre, worker_hap_post_rev, b, n_a);
+        ha_prof_leave();
     }
 
     // cal_sec_ec_multiple(b, n_thre, n_a, -1);
